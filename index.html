@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectDex - Dashboard</title>
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+  <!-- Vanta.js dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <header class="glass" style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h1>CONNECTDEX</h1>
+        <div id="user-account"></div>
+      </header>
+      <div class="search-bar glass">
+        <input type="text" placeholder="Search contacts..." id="search-input">
+      </div>
+      <div class="contacts-grid" id="contacts-container">
+        <!-- Contact cards will be generated here -->
+      </div>
+    </div>
+    <div class="fab-button" id="add-button">+</div>
+    <!-- Contact Modal -->
+    <div class="modal" id="contact-modal">
+      <div class="modal-content glass">
+        <div class="modal-header">
+          <h2 id="modal-title">Contact Details</h2>
+          <span class="modal-close" id="modal-close">×</span>
+        </div>
+        <div class="tabs">
+          <div class="tab active" data-tab="details">Details</div>
+          <div class="tab" data-tab="media">Media</div>
+          <div class="tab" data-tab="notes">Notes</div>
+        </div>
+        <div class="tab-content active" id="details-tab">
+          <div class="profile-section">
+            <div class="profile-header">
+              <img src="/api/placeholder/200/200" alt="Contact Photo" class="profile-photo-large" id="modal-photo">
+              <div class="profile-info">
+                <h3 class="profile-name" id="modal-name">John Doe</h3>
+                <div class="contact-meta" id="modal-meta">
+                  <span>Age: <span id="modal-age">28</span></span>
+                  <span>Type: <span id="modal-role">🔼</span></span>
+                </div>
+                <div class="social-links" id="modal-social"></div>
+              </div>
+            </div>
+            <div class="profile-details">
+              <div class="detail-group">
+                <div class="detail-label">Contact Info</div>
+                <div class="detail-value" id="modal-phone">Phone: 555-555-5555</div>
+                <div class="detail-value" id="modal-address">Address: 123 Main St</div>
+                <div class="detail-value" id="modal-apt">Apt: #304</div>
+                <div class="detail-value" id="modal-callbox">Callbox: 1234#</div>
+              </div>
+              <div class="detail-group">
+                <div class="detail-label">Stats</div>
+                <div class="detail-value" id="modal-stats">Height: 6'0" • Weight: 175lb</div>
+              </div>
+              <div class="detail-group">
+                <div class="detail-label">Preferences</div>
+                <div id="modal-preferences"></div>
+              </div>
+              <div class="detail-group">
+                <div class="detail-label">Kinks</div>
+                <div id="modal-kinks"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-content" id="media-tab">
+          <div class="detail-label">Photos &amp; Videos</div>
+          <div class="media-grid" id="modal-media"></div>
+        </div>
+        <div class="tab-content" id="notes-tab">
+          <div class="detail-label">Personal Notes</div>
+          <div class="detail-value" id="modal-notes"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Add/Edit Contact Modal -->
+    <div class="modal" id="edit-modal">
+      <div class="modal-content glass">
+        <div class="modal-header">
+          <h2 id="edit-modal-title">Add New Contact</h2>
+          <span class="modal-close" id="edit-modal-close">×</span>
+        </div>
+        <form id="contact-form">
+          <input type="hidden" id="edit-id">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-input" id="edit-name" placeholder="Enter name">
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Age</label>
+              <input type="number" class="form-input" id="edit-age" placeholder="Age">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Role</label>
+              <select class="form-input" id="edit-role">
+                <option value="🔼">🔼 Top</option>
+                <option value="🔽">🔽 Bottom</option>
+                <option value="↔️">↔️ Versatile</option>
+                <option value="👉">👉 Side</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Photo URL</label>
+            <input type="text" class="form-input" id="edit-photo" placeholder="Enter photo URL">
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Phone</label>
+              <input type="text" class="form-input" id="edit-phone" placeholder="Phone number">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Height</label>
+              <input type="text" class="form-input" id="edit-height" placeholder="Height">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Weight</label>
+              <input type="text" class="form-input" id="edit-weight" placeholder="Weight">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-input" id="edit-address" placeholder="Street address">
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Apartment #</label>
+              <input type="text" class="form-input" id="edit-apt" placeholder="Apartment number">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Callbox Code</label>
+              <input type="text" class="form-input" id="edit-callbox" placeholder="Callbox code">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Social Media</label>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <input type="text" class="form-input" id="edit-grindr" placeholder="Grindr username">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <input type="text" class="form-input" id="edit-twitter" placeholder="X/Twitter username">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <input type="text" class="form-input" id="edit-telegram" placeholder="Telegram username">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferences (comma separated)</label>
+            <input type="text" class="form-input" id="edit-preferences" placeholder="Example: dining out, hiking, movies">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kinks (comma separated)</label>
+            <input type="text" class="form-input" id="edit-kinks" placeholder="Enter kinks separated by commas">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Media URLs (comma separated)</label>
+            <input type="text" class="form-input" id="edit-media" placeholder="Enter photo/video URLs separated by commas">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea class="form-input" id="edit-notes" placeholder="Add personal notes here"></textarea>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="button" id="delete-button" style="background: rgba(255, 82, 82, 0.8); display: none;">Delete</button>
+            <button type="submit" class="button" id="save-button">Save Contact</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Initialize Vanta.js Fog Background -->
+  <script>
+    VANTA.FOG({
+      el: "body",
+      highlightColor: 0x550000,
+      midtoneColor: 0x330066,
+      lowlightColor: 0x000055,
+      baseColor: 0x000000,
+      blurFactor: 0.7,
+      speed: 1.5,
+      zoom: 0.8
+    });
+  </script>
+  <script async crossorigin="anonymous"
+          data-clerk-publishable-key="pk_test_ZGVlcC1zd2luZS00MC5jbGVyay5hY2NvdW50cy5kZXYk"
+          src="https://deep-swine-40.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js">
+  </script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

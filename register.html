@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnectDex - Register</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <div id="app" class="glass" style="padding: 40px; border-radius: 15px; text-align: center;">
+    <!-- Clerk Sign Up will be mounted here -->
+  </div>
+  <script async crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_ZGVlcC1zd2luZS00MC5jbGVyay5hY2NvdW50cy5kZXYk"
+    src="https://deep-swine-40.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js">
+  </script>
+  <script type="module">
+    window.addEventListener('load', async function() {
+      await Clerk.load();
+      Clerk.mountSignUp(document.getElementById('app'));
+    });
+  </script>
+</body>
+</html>
