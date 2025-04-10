@@ -7,35 +7,80 @@ const contactsContainer = document.getElementById('contacts-container');
 const contactModal = document.getElementById('contact-modal');
 const editModal = document.getElementById('edit-modal');
 const contactForm = document.getElementById('contact-form');
-const contactCount = document.getElementById('contact-count');
 const searchInput = document.getElementById('search-input');
 const addButton = document.getElementById('add-button');
 
+// Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', async function() {
-  await Clerk.load();
-  window.currentUser = Clerk.user;
-  isAdmin = window.currentUser && window.currentUser.email && window.currentUser.email.toLowerCase().includes("alston");
-  console.log("Admin status:", isAdmin);
-  if (!isAdmin) {
-    addButton.style.display = 'none';
+  try {
+    // Wait for Clerk to load
+    await Clerk.load();
+    
+    // Get current user and set admin status
+    const user = Clerk.user;
+    window.currentUser = user;
+    isAdmin = window.currentUser && window.currentUser.primaryEmailAddress && 
+              window.currentUser.primaryEmailAddress.emailAddress.toLowerCase().includes("alston");
+    console.log("Admin status:", isAdmin);
+    
+    // Hide add button if not admin
+    if (!isAdmin) {
+      addButton.style.display = 'none';
+    }
+    
+    // Load contacts
+    await loadContacts();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+  } catch (error) {
+    console.error("Initialization error:", error);
+    alert("There was an error loading the application. Please refresh the page and try again.");
+  }
+});
+
+function setupEventListeners() {
+  // Search input
+  if (searchInput) {
+    searchInput.addEventListener('input', handleSearch);
   }
   
-  loadContacts();
+  // Contact form
+  if (contactForm) {
+    contactForm.addEventListener('submit', handleFormSubmit);
+  }
   
-  searchInput.addEventListener('input', handleSearch);
-  contactForm.addEventListener('submit', handleFormSubmit);
-  addButton.addEventListener('click', () => {
-    console.log("FAB button clicked");
-    handleAddClick();
-  });
-  document.getElementById('modal-close').addEventListener('click', () => {
-    contactModal.style.display = 'none';
-  });
-  document.getElementById('edit-modal-close').addEventListener('click', () => {
-    editModal.style.display = 'none';
-  });
-  document.getElementById('delete-button').addEventListener('click', handleDelete);
+  // Add button
+  if (addButton) {
+    addButton.addEventListener('click', () => {
+      console.log("FAB button clicked");
+      handleAddClick();
+    });
+  }
   
+  // Modal close buttons
+  const modalClose = document.getElementById('modal-close');
+  if (modalClose) {
+    modalClose.addEventListener('click', () => {
+      contactModal.style.display = 'none';
+    });
+  }
+  
+  const editModalClose = document.getElementById('edit-modal-close');
+  if (editModalClose) {
+    editModalClose.addEventListener('click', () => {
+      editModal.style.display = 'none';
+    });
+  }
+  
+  // Delete button
+  const deleteButton = document.getElementById('delete-button');
+  if (deleteButton) {
+    deleteButton.addEventListener('click', handleDelete);
+  }
+  
+  // Tab navigation
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -45,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById(`${tabId}-tab`).classList.add('active');
     });
   });
-});
+}
 
 async function loadContacts() {
   try {
@@ -68,7 +113,7 @@ function handleSearch() {
       contact.name.toLowerCase().includes(searchTerm) ||
       (contact.preferences && contact.preferences.some(pref => pref.toLowerCase().includes(searchTerm))) ||
       (contact.kinks && contact.kinks.some(kink => kink.toLowerCase().includes(searchTerm))) ||
-      (contact.notes && contact.notes.toLowerCase().includes(searchTerm))
+      (contact.notes && contact.notes && contact.notes.toLowerCase().includes(searchTerm))
     );
   });
   renderContacts(filtered);
@@ -76,7 +121,12 @@ function handleSearch() {
 
 function renderContacts(contactsList = contacts) {
   contactsContainer.innerHTML = '';
-  contactCount.textContent = `${contactsList.length} Contacts`;
+  
+  if (contactsList.length === 0) {
+    contactsContainer.innerHTML = '<div class="glass" style="padding: 20px; text-align: center;">No contacts found</div>';
+    return;
+  }
+  
   contactsList.forEach(contact => {
     const cardEl = document.createElement('div');
     cardEl.className = 'contact-card glass';
@@ -91,23 +141,30 @@ function renderContacts(contactsList = contacts) {
         ${(contact.preferences || []).slice(0, 3).map(pref => `<span class="tag">${pref}</span>`).join('')}
       </div>
     `;
+    
+    // Make sure card is clickable
+    cardEl.style.cursor = 'pointer';
     cardEl.addEventListener('click', () => {
       openContactModal(contact);
     });
+    
     contactsContainer.appendChild(cardEl);
   });
 }
 
 async function handleFormSubmit(e) {
   e.preventDefault();
+  
   if (!isAdmin) {
     alert("Permission denied: You do not have privileges to modify contacts.");
     return;
   }
+  
+  // Get form data
   const contactId = document.getElementById('edit-id').value;
   const contactData = {
     name: document.getElementById('edit-name').value,
-    age: parseInt(document.getElementById('edit-age').value),
+    age: parseInt(document.getElementById('edit-age').value) || null,
     role: document.getElementById('edit-role').value,
     photo: document.getElementById('edit-photo').value,
     phone: document.getElementById('edit-phone').value,
@@ -125,17 +182,22 @@ async function handleFormSubmit(e) {
     notes: document.getElementById('edit-notes').value
   };
   
+  console.log("Saving contact data:", contactData);
+  
   try {
     if (contactId) {
       await updateContact(contactId, contactData);
+      console.log("Contact updated successfully");
     } else {
       await addContact(contactData);
+      console.log("Contact added successfully");
     }
+    
     await loadContacts();
     editModal.style.display = 'none';
   } catch (error) {
     console.error('Error saving contact:', error);
-    alert('Error saving contact. Please try again.');
+    alert('Error saving contact: ' + error.message);
   }
 }
 
@@ -144,15 +206,23 @@ async function handleDelete() {
     alert("Permission denied: You do not have privileges to delete contacts.");
     return;
   }
+  
   if (!confirm('Are you sure you want to delete this contact?')) return;
+  
   const contactId = document.getElementById('edit-id').value;
+  if (!contactId) {
+    alert('No contact selected for deletion');
+    return;
+  }
+  
   try {
     await deleteContact(contactId);
+    console.log("Contact deleted successfully");
     await loadContacts();
     editModal.style.display = 'none';
   } catch (error) {
     console.error('Error deleting contact:', error);
-    alert('Error deleting contact. Please try again.');
+    alert('Error deleting contact: ' + error.message);
   }
 }
 
@@ -161,6 +231,7 @@ function handleAddClick() {
     alert("Permission denied: You do not have privileges to add contacts.");
     return;
   }
+  
   console.log("handleAddClick triggered");
   document.getElementById('edit-modal-title').textContent = 'Add New Contact';
   document.getElementById('delete-button').style.display = 'none';
@@ -170,6 +241,7 @@ function handleAddClick() {
 }
 
 function openContactModal(contact) {
+  // Set basic contact information
   document.getElementById('modal-name').textContent = contact.name;
   document.getElementById('modal-age').textContent = contact.age || '';
   document.getElementById('modal-role').textContent = contact.role || '';
@@ -180,36 +252,107 @@ function openContactModal(contact) {
   document.getElementById('modal-callbox').textContent = `Callbox: ${contact.callbox || ''}`;
   document.getElementById('modal-stats').textContent = `Height: ${contact.height || ''} • Weight: ${contact.weight || ''}`;
   
-  contactModal.style.display = 'flex';
+  // Set preferences
+  const preferencesContainer = document.getElementById('modal-preferences');
+  if (preferencesContainer) {
+    preferencesContainer.innerHTML = (contact.preferences || [])
+      .map(pref => `<span class="tag">${pref}</span>`)
+      .join('');
+  }
   
-  const editButton = document.createElement('button');
-  editButton.className = 'button';
-  editButton.textContent = 'Edit';
-  editButton.style.position = 'absolute';
-  editButton.style.top = '30px';
-  editButton.style.right = '70px';
+  // Set kinks
+  const kinksContainer = document.getElementById('modal-kinks');
+  if (kinksContainer) {
+    kinksContainer.innerHTML = (contact.kinks || [])
+      .map(kink => `<span class="tag">${kink}</span>`)
+      .join('');
+  }
   
-  editButton.addEventListener('click', () => {
-    if (!isAdmin) {
-      alert("Permission denied: You do not have privileges to edit contacts.");
-      return;
+  // Set notes
+  const notesContainer = document.getElementById('modal-notes');
+  if (notesContainer) {
+    notesContainer.innerHTML = contact.notes || '';
+  }
+  
+  // Set media
+  const mediaContainer = document.getElementById('modal-media');
+  if (mediaContainer) {
+    mediaContainer.innerHTML = '';
+    
+    if (contact.media && contact.media.length > 0) {
+      contact.media.forEach(url => {
+        const mediaItem = document.createElement('div');
+        mediaItem.className = 'media-item';
+        
+        if (url.match(/\.(mp4|mov)$/i)) {
+          mediaItem.innerHTML = `<video controls><source src="${url}" type="video/${url.split('.').pop()}"></video>`;
+        } else {
+          mediaItem.innerHTML = `<img src="${url}" alt="Media">`;
+        }
+        
+        mediaContainer.appendChild(mediaItem);
+      });
+    } else {
+      mediaContainer.innerHTML = '<p>No media available</p>';
     }
-    openEditModal(contact);
-    contactModal.style.display = 'none';
-  });
+  }
   
-  const oldEditButton = document.querySelector('#contact-modal .button');
-  if (oldEditButton) oldEditButton.remove();
+  // Set social links
+  const socialContainer = document.getElementById('modal-social');
+  if (socialContainer) {
+    socialContainer.innerHTML = '';
+    
+    if (contact.grindr) {
+      socialContainer.innerHTML += `<div class="social-icon" title="Grindr: ${contact.grindr}">G</div>`;
+    }
+    
+    if (contact.twitter) {
+      socialContainer.innerHTML += `<div class="social-icon" title="Twitter: ${contact.twitter}">X</div>`;
+    }
+    
+    if (contact.telegram) {
+      socialContainer.innerHTML += `<div class="social-icon" title="Telegram: ${contact.telegram}">T</div>`;
+    }
+  }
   
-  document.querySelector('.modal-header').appendChild(editButton);
+  // Add edit button if admin
+  const modalHeader = document.querySelector('.modal-header');
+  const existingEditButton = document.querySelector('#contact-modal .button');
+  if (existingEditButton) {
+    existingEditButton.remove();
+  }
+  
+  if (isAdmin) {
+    const editButton = document.createElement('button');
+    editButton.className = 'button';
+    editButton.textContent = 'Edit';
+    editButton.style.position = 'absolute';
+    editButton.style.top = '30px';
+    editButton.style.right = '70px';
+    
+    editButton.addEventListener('click', () => {
+      openEditModal(contact);
+      contactModal.style.display = 'none';
+    });
+    
+    modalHeader.appendChild(editButton);
+  }
+  
+  // Show the modal
+  contactModal.style.display = 'flex';
 }
 
 function openEditModal(contact = null) {
+  if (!isAdmin) {
+    alert("Permission denied: You do not have privileges to edit contacts.");
+    return;
+  }
+  
   if (contact) {
     document.getElementById('edit-modal-title').textContent = 'Edit Contact';
-    document.getElementById('delete-button').style.display = isAdmin ? 'inline-block' : 'none';
+    document.getElementById('delete-button').style.display = 'inline-block';
     document.getElementById('edit-id').value = contact.id;
-    document.getElementById('edit-name').value = contact.name;
+    document.getElementById('edit-name').value = contact.name || '';
     document.getElementById('edit-age').value = contact.age || '';
     document.getElementById('edit-role').value = contact.role || '';
     document.getElementById('edit-photo').value = contact.photo || '';
@@ -233,5 +376,6 @@ function openEditModal(contact = null) {
     document.getElementById('edit-id').value = '';
   }
   
+  // Show the modal
   editModal.style.display = 'flex';
 }
